@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.forms.models import model_to_dict
 from django.urls import reverse
+import re
 
 from pywebpush import WebPushException, webpush
 
@@ -9,17 +10,17 @@ def send_notification_to_user(user, payload, ttl=0):
     # Get all the push_info of the user
 
     errors = []
+    exception_410 = []
     push_infos = user.webpush_info.select_related("subscription")
     for push_info in push_infos:
         try:
-            _send_notification(push_info.subscription, payload, ttl)
-
+            response = _send_notification(push_info.subscription, payload, ttl)
         except WebPushException as ex:
-            errors.append(dict(subscription=push_info.subscription,
-                               exception=ex))
+            exc = str(ex)
+            if re.search('410',exc):
+                exception_410.append(push_info.subscription)
 
-    if errors:
-        raise WebPushException("Push failed.", extra=errors)
+    return exception_410
 
 
 def send_notification_to_group(group_name, payload, ttl=0):

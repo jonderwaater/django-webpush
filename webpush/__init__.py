@@ -10,4 +10,8 @@ def send_group_notification(group_name, payload, ttl=0):
 
 def send_user_notification(user, payload, ttl=0):
     payload = json.dumps(payload)
-    send_notification_to_user(user, payload, ttl)
+    exceptions_410 = send_notification_to_user(user, payload, ttl)
+    if len(exceptions_410) > 0:
+        from .models import PushInformation
+        for subscription in exceptions_410:
+            PushInformation.objects.get(subscription=subscription).delete()
